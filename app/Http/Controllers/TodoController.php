@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\Todolist;
 use App\Models\Todo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use  DataTables;
+use App\Jobs\Todo\Process;
 class TodoController extends Controller
 {
     /**
@@ -66,6 +68,7 @@ class TodoController extends Controller
     public function create()
     {
         return view('todo.create');
+       
     }
 
     /**
@@ -79,14 +82,16 @@ class TodoController extends Controller
     {
         $this->validate($request, ['name' => 'required']);
         $todocheck= Todo::where('name',$request->get('name'))->first();
+        
         if($todocheck==null){
             Todo::create([
                 'name' => $request->get('name'),
                 'user_id' => Auth::user()->id,
             ]);
- 
+
+        $todo=Todo::where('name',$request->get('name'))->first();
         $msg = "New todo created successfully";
-        
+        event(new Todolist($todo));
         return response()->json(array('msg'=> $msg), 200);
         }
         else{
@@ -107,10 +112,10 @@ class TodoController extends Controller
     public function update($id)
     {
         $todo = Todo::findOrFail($id);
-        $todo->status = 1;
-        $todo->save();
+        // $todo->status = 1;
+        // $todo->save();
         $msg = "Todo updated successfully";
-        
+        Process::dispatch($todo);
         return response()->json(array('msg'=> $msg), 200);
        
     }
